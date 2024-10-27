@@ -1,0 +1,3 @@
+[submodule "common-types"]
+	path = common-types
+	url = git@github.com:CodeClarityCE/utility-types.git

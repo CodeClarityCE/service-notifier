@@ -1,0 +1,27 @@
+services:
+  service-notifier:
+    build:
+      context: ../../backend
+      dockerfile: services/notifier/.cloud/docker/Dockerfile
+      target: plugin-dev
+      args:
+        - PLUGINNAME=notifier
+        - KIND=services
+    image: ceherzog/service-notifier-dev:latest
+    restart: always
+    volumes:
+      - ../../backend:/codeclarity
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_started
+      pg_bouncer:
+        condition: service_started
+      adminer:
+        condition: service_started
+    env_file:
+      - ../../.cloud/env/.env.dev
+
+volumes:
+  projects:
