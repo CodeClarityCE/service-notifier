@@ -1,7 +1,7 @@
 {
     "name": "notifier",
     "version": "v0.0.1-alpha",
-    "image_name": "ceherzog/service-notifier",
+    "image_name": "codeclarityce/service-notifier",
     "image_version": "0.0.1",
     "depends_on": [],
     "description": "CodeClarity's Notifier Service",

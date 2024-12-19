@@ -7,7 +7,7 @@ services:
       args:
         - PLUGINNAME=notifier
         - KIND=services
-    image: ceherzog/service-notifier-dev:latest
+    image: codeclarityce/service-notifier-dev:latest
     restart: always
     volumes:
       - ../../backend:/codeclarity
