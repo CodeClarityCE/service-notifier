@@ -2,7 +2,6 @@
     "name": "notifier",
     "version": "v0.0.2-alpha",
     "image_name": "codeclarityce/service-notifier",
-    "image_version": "0.0.2",
     "depends_on": [],
     "description": "CodeClarity's Notifier Service",
     "config": {}
