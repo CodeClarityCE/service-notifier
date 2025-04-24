@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/CodeClarityCE/utility-amqp-helper v0.0.1-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.2-alpha
-	github.com/CodeClarityCE/utility-types v0.0.3-alpha
+	github.com/CodeClarityCE/utility-types v0.0.4-alpha
 	github.com/uptrace/bun v1.2.11
 	github.com/uptrace/bun/dialect/pgdialect v1.2.11
 	github.com/uptrace/bun/driver/pgdriver v1.2.11
