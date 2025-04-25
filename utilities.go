@@ -103,11 +103,11 @@ func readConfig() (plugin.Plugin, error) {
 	}
 	config.Name = config.Name + ":" + config.Version
 
-	err = register(config)
-	if err != nil {
-		log.Printf("%v", err)
-		return plugin.Plugin{}, err
-	}
+	// err = register(config)
+	// if err != nil {
+	// 	log.Printf("%v", err)
+	// 	return plugin.Plugin{}, err
+	// }
 
 	return config, nil
 }
