@@ -44,13 +44,20 @@ func callback(args any, config plugin.Plugin, message []byte) {
 		return
 	}
 
-	// First attempt vuln_summary detection directly
+	// First attempt specific message type detection directly
 	var generic map[string]any
 	if err := json.Unmarshal(message, &generic); err == nil {
-		if t, ok := generic["type"].(string); ok && t == "vuln_summary" {
-			log.Printf("received vuln_summary message: %s", string(message))
-			handleVulnSummary(s, generic)
-			return
+		if t, ok := generic["type"].(string); ok {
+			switch t {
+			case "vuln_summary":
+				log.Printf("received vuln_summary message: %s", string(message))
+				handleVulnSummary(s, generic)
+				return
+			case "package_update":
+				log.Printf("received package_update message: %s", string(message))
+				handlePackageUpdate(s, generic)
+				return
+			}
 		}
 	}
 
@@ -178,6 +185,121 @@ func handleVulnSummary(s Arguments, payload map[string]any) {
 		return
 	}
 	log.Printf("notification %s created; attached to %d users", notifID.String(), attached)
+}
+
+func handlePackageUpdate(s Arguments, payload map[string]any) {
+	log.Printf("handling package update")
+	orgIDStr, _ := payload["organization_id"].(string)
+	analysisID, _ := payload["analysis_id"].(string)
+	projectID, _ := payload["project_id"].(string)
+	projectName, _ := payload["project_name"].(string)
+	packageName, _ := payload["package_name"].(string)
+	currentVersion, _ := payload["current_version"].(string)
+	newVersion, _ := payload["new_version"].(string)
+	dependencyType, _ := payload["dependency_type"].(string)
+	releaseNotesURL, _ := payload["release_notes_url"].(string)
+	projectCount, _ := payload["project_count"].(float64)
+
+	if orgIDStr == "" || packageName == "" || currentVersion == "" || newVersion == "" {
+		log.Printf("incomplete package update payload")
+		return
+	}
+
+	// Determine notification priority and styling based on dependency type
+	var title, nType string
+	var desc string
+
+	if dependencyType == "production" {
+		title = fmt.Sprintf("🔴 Production Update: %s", packageName)
+		nType = "warning" // Higher priority for production dependencies
+		desc = fmt.Sprintf("Production dependency %s can be updated from %s to %s", packageName, currentVersion, newVersion)
+	} else if dependencyType == "development" {
+		title = fmt.Sprintf("🟡 Dev Update: %s", packageName)
+		nType = "info"
+		desc = fmt.Sprintf("Development dependency %s can be updated from %s to %s", packageName, currentVersion, newVersion)
+	} else {
+		// Fallback for unknown dependency type
+		title = fmt.Sprintf("Update available: %s", packageName)
+		nType = "info"
+		desc = fmt.Sprintf("%s can be updated from %s to %s", packageName, currentVersion, newVersion)
+	}
+
+	if projectName != "" {
+		projectText := projectName
+		if int(projectCount) > 1 {
+			projectText = fmt.Sprintf("%d projects", int(projectCount))
+		}
+
+		if dependencyType == "production" {
+			desc = fmt.Sprintf("Production dependency %s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
+		} else if dependencyType == "development" {
+			desc = fmt.Sprintf("Development dependency %s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
+		} else {
+			desc = fmt.Sprintf("%s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
+		}
+	}
+
+	ctx := context.Background()
+
+	// 1) Collect users of organization from CODECLARITY DB (use bun placeholders '?')
+	userIDs := make([]string, 0, 8)
+	rowsK, err := s.codeclarity.QueryContext(ctx, `SELECT m."userId" FROM organization_memberships m WHERE m."organizationId" = ?`, orgIDStr)
+	if err != nil {
+		log.Printf("user fetch (codeclarity) failed: %v", err)
+		return
+	}
+	for rowsK.Next() {
+		var uid string
+		if err := rowsK.Scan(&uid); err != nil {
+			log.Printf("scan user (codeclarity): %v", err)
+			continue
+		}
+		userIDs = append(userIDs, uid)
+	}
+	rowsK.Close()
+	if err := rowsK.Err(); err != nil {
+		log.Printf("row err (codeclarity): %v", err)
+	}
+	if len(userIDs) == 0 {
+		log.Printf("no users found for organization %s", orgIDStr)
+		return
+	}
+
+	// 2) Insert notification into CODECLARITY DB and attach users
+	tx, err := s.codeclarity.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		log.Printf("codeclarity tx begin failed: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
+	var notifID uuid.UUID
+	contentJSON := fmt.Sprintf(`{"analysis_id":"%s","organization_id":"%s","project_id":"%s","project_name":"%s","package_name":"%s","current_version":"%s","new_version":"%s","dependency_type":"%s","project_count":%d,"release_notes_url":"%s"}`,
+		analysisID, orgIDStr, projectID, projectName, packageName, currentVersion, newVersion, dependencyType, int(projectCount), releaseNotesURL)
+	err = tx.QueryRowContext(ctx, `INSERT INTO notification (title, description, content, type, content_type) VALUES (?,?,?::jsonb,?,?) RETURNING id`,
+		title, desc, contentJSON, nType, "package_update").Scan(&notifID)
+	if err != nil {
+		log.Printf("insert notif failed: %v", err)
+		return
+	}
+
+	attached := 0
+	for _, uid := range userIDs {
+		if uid == "" {
+			continue
+		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO notification_users_user ("notificationId", "userId") VALUES (?,?) ON CONFLICT DO NOTHING`, notifID, uid)
+		if err != nil {
+			log.Printf("attach user failed: %v", err)
+			continue
+		}
+		attached++
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("commit err: %v", err)
+		return
+	}
+	log.Printf("package update notification %s created; attached to %d users", notifID.String(), attached)
 }
 
 func toJSON(m map[string]any) string {
