@@ -68,8 +68,8 @@ func main() {
 		knowledge:   db_knowledge,
 	}
 
-	// Start listening on the queue
-	amqp_helper.Listen("service_"+config.Name, callback, args, config)
+	// Start listening on the queue (fixed name without version suffix)
+	amqp_helper.Listen("service_notifier", callback, args, config)
 }
 
 // startAnalysis is a function that performs the analysis for codeclarity plugin.
