@@ -90,9 +90,10 @@ func handleVulnSummary(s Arguments, payload map[string]any) {
 	}
 
 	nType := "info"
-	if maxSeverity == "CRITICAL" || maxSeverity == "HIGH" {
+	switch maxSeverity {
+	case "CRITICAL", "HIGH":
 		nType = "error"
-	} else if maxSeverity == "MEDIUM" {
+	case "MEDIUM":
 		nType = "warning"
 	}
 
@@ -103,11 +104,12 @@ func handleVulnSummary(s Arguments, payload map[string]any) {
 		medium := int(severityCounts["MEDIUM"])
 		low := int(severityCounts["LOW"])
 		desc = fmt.Sprintf("%d vulnerabilities (Critical: %d, High: %d, Medium: %d, Low: %d). Max severity: %s.", total, critical, high, medium, low, maxSeverity)
-		if maxSeverity == "CRITICAL" || maxSeverity == "HIGH" {
+		switch maxSeverity {
+		case "CRITICAL", "HIGH":
 			desc += " Immediate attention recommended."
-		} else if maxSeverity == "MEDIUM" {
+		case "MEDIUM":
 			desc += " Plan remediation soon."
-		} else {
+		default:
 			desc += " Monitor as needed."
 		}
 	}

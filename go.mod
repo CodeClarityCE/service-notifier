@@ -6,13 +6,13 @@ require (
 	github.com/CodeClarityCE/utility-amqp-helper v0.0.6-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.8-alpha
 	github.com/CodeClarityCE/utility-types v0.0.11-alpha
+	github.com/google/uuid v1.6.0
 	github.com/uptrace/bun v1.2.15
 	github.com/uptrace/bun/dialect/pgdialect v1.2.15
 	github.com/uptrace/bun/driver/pgdriver v1.2.15
 )
 
 require (
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
