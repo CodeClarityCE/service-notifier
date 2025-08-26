@@ -9,7 +9,7 @@ import (
 	"time"
 
 	service "github.com/CodeClarityCE/service-notifier/src"
-	"github.com/CodeClarityCE/utility-types/boilerplates"
+	"github.com/CodeClarityCE/utility-boilerplates"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
