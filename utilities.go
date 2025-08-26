@@ -43,10 +43,10 @@ func handleNotification(db *boilerplates.ServiceDatabases, d amqp.Delivery) {
 	start := time.Now()
 	// Legacy startAnalysis equivalent - for backward compatibility
 	output := service.Start(db.CodeClarity, dispatcherMessage["package"], dispatcherMessage["version"], dispatcherMessage["key"])
-	
+
 	result := make(map[string]any)
 	result["output"] = output
-	
+
 	log.Printf("legacy processing took %s, result: %v", time.Since(start), result)
 }
 
@@ -279,4 +279,3 @@ func toJSON(m map[string]any) string {
 	b, _ := json.Marshal(m)
 	return string(b)
 }
-
