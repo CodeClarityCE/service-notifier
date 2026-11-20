@@ -3,15 +3,15 @@ module github.com/CodeClarityCE/service-notifier
 go 1.27.4
 
 require (
-	github.com/CodeClarityCE/utility-boilerplates v0.0.15-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.16-alpha
 	github.com/google/uuid v1.6.0
 	github.com/rabbitmq/amqp091-go v1.16.0
 	github.com/uptrace/bun v1.2.18
 )
 
 require (
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.19-alpha // indirect
-	github.com/CodeClarityCE/utility-dbhelper v0.0.22-alpha // indirect
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.20-alpha // indirect
+	github.com/CodeClarityCE/utility-dbhelper v0.0.23-alpha // indirect
 	github.com/CodeClarityCE/utility-types v0.0.26-alpha // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
