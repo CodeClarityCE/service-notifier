@@ -12,6 +12,7 @@ import (
 	"github.com/CodeClarityCE/utility-boilerplates"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sirupsen/logrus"
 )
 
 // handleNotification processes messages from the service_notifier queue using ServiceBase databases
@@ -114,9 +115,11 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 		}
 		userIDs = append(userIDs, uid)
 	}
-	rowsK.Close()
 	if err := rowsK.Err(); err != nil {
 		log.Printf("row err (codeclarity): %v", err)
+	}
+	if err := rowsK.Close(); err != nil {
+		logrus.WithError(err).WithField("organization_id", orgIDStr).Warn("Failed to close the user rows")
 	}
 	if len(userIDs) == 0 {
 		log.Printf("no users found for organization %s", orgIDStr)
@@ -182,15 +185,16 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 	var title, nType string
 	var desc string
 
-	if dependencyType == "production" {
+	switch dependencyType {
+	case "production":
 		title = fmt.Sprintf("🔴 Production Update: %s", packageName)
 		nType = "warning" // Higher priority for production dependencies
 		desc = fmt.Sprintf("Production dependency %s can be updated from %s to %s", packageName, currentVersion, newVersion)
-	} else if dependencyType == "development" {
+	case "development":
 		title = fmt.Sprintf("🟡 Dev Update: %s", packageName)
 		nType = "info"
 		desc = fmt.Sprintf("Development dependency %s can be updated from %s to %s", packageName, currentVersion, newVersion)
-	} else {
+	default:
 		// Fallback for unknown dependency type
 		title = fmt.Sprintf("Update available: %s", packageName)
 		nType = "info"
@@ -203,11 +207,12 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 			projectText = fmt.Sprintf("%d projects", int(projectCount))
 		}
 
-		if dependencyType == "production" {
+		switch dependencyType {
+		case "production":
 			desc = fmt.Sprintf("Production dependency %s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
-		} else if dependencyType == "development" {
+		case "development":
 			desc = fmt.Sprintf("Development dependency %s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
-		} else {
+		default:
 			desc = fmt.Sprintf("%s can be updated from %s to %s in %s", packageName, currentVersion, newVersion, projectText)
 		}
 	}
@@ -229,9 +234,11 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 		}
 		userIDs = append(userIDs, uid)
 	}
-	rowsK.Close()
 	if err := rowsK.Err(); err != nil {
 		log.Printf("row err (codeclarity): %v", err)
+	}
+	if err := rowsK.Close(); err != nil {
+		logrus.WithError(err).WithField("organization_id", orgIDStr).Warn("Failed to close the user rows")
 	}
 	if len(userIDs) == 0 {
 		log.Printf("no users found for organization %s", orgIDStr)
