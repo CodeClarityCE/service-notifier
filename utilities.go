@@ -12,6 +12,7 @@ import (
 	"github.com/CodeClarityCE/utility-boilerplates"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/sirupsen/logrus"
 )
 
 // handleNotification processes messages from the service_notifier queue using ServiceBase databases
@@ -118,7 +119,7 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 		log.Printf("row err (codeclarity): %v", err)
 	}
 	if err := rowsK.Close(); err != nil {
-		log.Printf("close rows (codeclarity): %v", err)
+		logrus.WithError(err).WithField("organization_id", orgIDStr).Warn("Failed to close the user rows")
 	}
 	if len(userIDs) == 0 {
 		log.Printf("no users found for organization %s", orgIDStr)
@@ -237,7 +238,7 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 		log.Printf("row err (codeclarity): %v", err)
 	}
 	if err := rowsK.Close(); err != nil {
-		log.Printf("close rows (codeclarity): %v", err)
+		logrus.WithError(err).WithField("organization_id", orgIDStr).Warn("Failed to close the user rows")
 	}
 	if len(userIDs) == 0 {
 		log.Printf("no users found for organization %s", orgIDStr)
