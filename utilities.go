@@ -144,7 +144,7 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 		})
 	}
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr}).Error("Failed to encode the vulnerability summary content")
+		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr, "project_id": projectID}).Error("Failed to encode the vulnerability summary content")
 		return
 	}
 
@@ -279,7 +279,7 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 		ReleaseNotesURL: releaseNotesURL,
 	})
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr}).Error("Failed to encode the package update content")
+		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr, "project_id": projectID}).Error("Failed to encode the package update content")
 		return
 	}
 
