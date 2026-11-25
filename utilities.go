@@ -95,9 +95,6 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 		}
 	}
 
-	// Get top list as JSON string
-	topBytes, _ := json.Marshal(payload["top"])
-
 	ctx := context.Background()
 
 	// 1) Collect users of organization from CODECLARITY DB (use bun placeholders '?')
@@ -125,6 +122,32 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 		log.Printf("no users found for organization %s", orgIDStr)
 	}
 
+	// Encode the content before opening a transaction; skip the notification on failure.
+	topBytes, err := json.Marshal(payload["top"])
+	var contentJSON []byte
+	if err == nil {
+		contentJSON, err = service.BuildVulnSummaryContent(service.VulnSummaryContent{
+			AnalysisID:     analysisID,
+			OrganizationID: orgIDStr,
+			ProjectID:      projectID,
+			ProjectName:    projectName,
+			Total:          total,
+			MaxSeverity:    maxSeverity,
+			SeverityCounts: service.SeverityCounts{
+				Critical: int(severityCounts["CRITICAL"]),
+				High:     int(severityCounts["HIGH"]),
+				Medium:   int(severityCounts["MEDIUM"]),
+				Low:      int(severityCounts["LOW"]),
+				None:     int(severityCounts["NONE"]),
+			},
+			Top: topBytes,
+		})
+	}
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr}).Error("Failed to encode the vulnerability summary content")
+		return
+	}
+
 	// 2) Insert notification into CODECLARITY DB and attach users
 	tx, err := db.CodeClarity.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -134,11 +157,8 @@ func handleVulnSummary(db *boilerplates.ServiceDatabases, payload map[string]any
 	defer tx.Rollback()
 
 	var notifID uuid.UUID
-	contentJSON := fmt.Sprintf(`{"analysis_id":"%s","organization_id":"%s","project_id":"%s","project_name":"%s","total":%d,"max_severity":"%s","severity_counts":%s,"top":%s}`,
-		analysisID, orgIDStr, projectID, projectName, total, maxSeverity,
-		toJSON(map[string]any{"CRITICAL": severityCounts["CRITICAL"], "HIGH": severityCounts["HIGH"], "MEDIUM": severityCounts["MEDIUM"], "LOW": severityCounts["LOW"], "NONE": severityCounts["NONE"]}), string(topBytes))
 	err = tx.QueryRowContext(ctx, `INSERT INTO notification (title, description, content, type, content_type) VALUES (?,?,?::jsonb,?,?) RETURNING id`,
-		"Vulnerability summary", desc, contentJSON, nType, "vuln_summary").Scan(&notifID)
+		"Vulnerability summary", desc, string(contentJSON), nType, "vuln_summary").Scan(&notifID)
 	if err != nil {
 		log.Printf("insert notif failed: %v", err)
 		return
@@ -245,6 +265,24 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 		return
 	}
 
+	// Encode the content before opening a transaction; skip the notification on failure.
+	contentJSON, err := service.BuildPackageUpdateContent(service.PackageUpdateContent{
+		AnalysisID:      analysisID,
+		OrganizationID:  orgIDStr,
+		ProjectID:       projectID,
+		ProjectName:     projectName,
+		PackageName:     packageName,
+		CurrentVersion:  currentVersion,
+		NewVersion:      newVersion,
+		DependencyType:  dependencyType,
+		ProjectCount:    int(projectCount),
+		ReleaseNotesURL: releaseNotesURL,
+	})
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"analysis_id": analysisID, "organization_id": orgIDStr}).Error("Failed to encode the package update content")
+		return
+	}
+
 	// 2) Insert notification into CODECLARITY DB and attach users
 	tx, err := db.CodeClarity.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
@@ -254,10 +292,8 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 	defer tx.Rollback()
 
 	var notifID uuid.UUID
-	contentJSON := fmt.Sprintf(`{"analysis_id":"%s","organization_id":"%s","project_id":"%s","project_name":"%s","package_name":"%s","current_version":"%s","new_version":"%s","dependency_type":"%s","project_count":%d,"release_notes_url":"%s"}`,
-		analysisID, orgIDStr, projectID, projectName, packageName, currentVersion, newVersion, dependencyType, int(projectCount), releaseNotesURL)
 	err = tx.QueryRowContext(ctx, `INSERT INTO notification (title, description, content, type, content_type) VALUES (?,?,?::jsonb,?,?) RETURNING id`,
-		title, desc, contentJSON, nType, "package_update").Scan(&notifID)
+		title, desc, string(contentJSON), nType, "package_update").Scan(&notifID)
 	if err != nil {
 		log.Printf("insert notif failed: %v", err)
 		return
@@ -280,9 +316,4 @@ func handlePackageUpdate(db *boilerplates.ServiceDatabases, payload map[string]a
 		return
 	}
 	log.Printf("package update notification %s created; attached to %d users", notifID.String(), attached)
-}
-
-func toJSON(m map[string]any) string {
-	b, _ := json.Marshal(m)
-	return string(b)
 }
